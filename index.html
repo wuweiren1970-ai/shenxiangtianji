@@ -43,11 +43,16 @@
         .age-input:focus { outline: none; border-color: #d4af37; }
         
         /* 上传区域 */
-        .upload-section { background: rgba(0,0,0,0.25); border: 2px dashed rgba(212, 175, 55, 0.4); border-radius: 16px; padding: 35px 25px; text-align: center; margin-bottom: 20px; transition: all 0.3s; }
-        .upload-section:active { background: rgba(212, 175, 55, 0.1); transform: scale(0.98); }
-        .upload-btn { background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #1a1a2e; border: none; padding: 14px 35px; font-size: 1.05em; border-radius: 25px; font-family: inherit; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
-        .upload-btn:active { transform: scale(0.95); }
-        #fileInput { display: none; }
+        .upload-section { display: none; }
+        
+        /* 照片来源选择 */
+        .photo-source-section { background: rgba(0,0,0,0.25); border: 2px dashed rgba(212, 175, 55, 0.4); border-radius: 16px; padding: 35px 25px; text-align: center; margin-bottom: 20px; }
+        .photo-source-buttons { display: flex; gap: 15px; justify-content: center; }
+        .source-btn { flex: 1; max-width: 140px; padding: 20px 15px; background: rgba(212, 175, 55, 0.1); border: 2px solid rgba(212, 175, 55, 0.3); border-radius: 16px; color: #d4af37; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .source-btn:active { background: rgba(212, 175, 55, 0.2); transform: scale(0.95); }
+        .source-icon { font-size: 2em; }
+        .source-text { font-size: 1.1em; font-weight: 600; }
+        .source-sub { font-size: 0.75em; opacity: 0.7; }
         
         /* 照片预览 */
         .preview-section { display: none; text-align: center; margin-bottom: 20px; }
@@ -139,15 +144,29 @@
             </div>
         </div>
 
-        <!-- 上传区域 -->
-        <div class="upload-section" id="uploadSection" onclick="checkInfoAndUpload()">
+        <!-- 照片来源选择 -->
+        <div class="photo-source-section" id="photoSourceSection">
             <div class="decoration">☯ ☯ ☯</div>
-            <p style="margin-bottom: 18px; font-size: 0.95em; line-height: 1.6;">
-                上传正面清晰照片<br>
-                <span style="font-size: 0.85em; opacity: 0.8;">AI神相为您解读面相</span>
+            <p style="margin-bottom: 20px; font-size: 0.95em; line-height: 1.6;">
+                选择照片来源<br>
+                <span style="font-size: 0.85em; opacity: 0.8;">建议拍摄正面清晰照片</span>
             </p>
-            <button class="upload-btn">📷 选择照片</button>
-            <input type="file" id="fileInput" accept="image/*" capture="user" onchange="handleFileSelect(event)">
+            <div class="photo-source-buttons">
+                <button class="source-btn camera-btn" onclick="openCamera()">
+                    <span class="source-icon">📷</span>
+                    <span class="source-text">拍照</span>
+                    <span class="source-sub">调用相机</span>
+                </button>
+                <button class="source-btn album-btn" onclick="openAlbum()">
+                    <span class="source-icon">🖼️</span>
+                    <span class="source-text">相册</span>
+                    <span class="source-sub">选择照片</span>
+                </button>
+            </div>
+            <!-- 隐藏的文件输入 -->
+            <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="handleFileSelect(event)">
+            <input type="file" id="albumInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+        </div>
         </div>
 
         <!-- 照片预览 -->
@@ -334,7 +353,17 @@
                 document.getElementById('ageInput').focus();
                 return;
             }
-            document.getElementById('fileInput').click();
+            // 显示照片来源选择
+            document.getElementById('infoSection').style.display = 'none';
+            document.getElementById('photoSourceSection').style.display = 'block';
+        }
+
+        function openCamera() {
+            document.getElementById('cameraInput').click();
+        }
+
+        function openAlbum() {
+            document.getElementById('albumInput').click();
         }
 
         function handleFileSelect(event) {
@@ -346,8 +375,7 @@
                 const img = document.getElementById('previewImg');
                 img.src = e.target.result;
                 img.onload = async function() {
-                    document.getElementById('uploadSection').style.display = 'none';
-                    document.getElementById('infoSection').style.display = 'none';
+                    document.getElementById('photoSourceSection').style.display = 'none';
                     document.getElementById('previewSection').classList.add('active');
                     if (!faceMesh) await initFaceMesh();
                     await faceMesh.send({ image: img });
@@ -770,9 +798,10 @@
         // ============ 重新开始 ============
         function restart() {
             document.getElementById('resultSection').classList.remove('active');
-            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('photoSourceSection').style.display = 'none';
             document.getElementById('infoSection').style.display = 'block';
-            document.getElementById('fileInput').value = '';
+            document.getElementById('cameraInput').value = '';
+            document.getElementById('albumInput').value = '';
             document.getElementById('landmarksInfo').style.display = 'none';
             document.getElementById('analyzeBtn').disabled = true;
             document.getElementById('ageInput').value = '';
