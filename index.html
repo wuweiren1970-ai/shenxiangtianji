@@ -45,8 +45,21 @@
         /* 上传区域 */
         .upload-section { display: none; }
         
+        /* 信息输入区域 */
+        .info-section { background: rgba(0,0,0,0.25); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+        .info-title { text-align: center; font-size: 1em; margin-bottom: 15px; color: #d4af37; }
+        .info-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .info-item { flex: 1; }
+        .info-label { font-size: 0.85em; color: #b8860b; margin-bottom: 8px; display: block; }
+        .gender-options { display: flex; gap: 10px; }
+        .gender-btn { flex: 1; padding: 12px; background: rgba(212, 175, 55, 0.1); border: 2px solid rgba(212, 175, 55, 0.3); border-radius: 10px; color: #d4af37; font-size: 1em; cursor: pointer; transition: all 0.3s; }
+        .gender-btn.selected { background: #d4af37; color: #1a1a2e; border-color: #d4af37; }
+        .age-input { width: 100%; padding: 12px; background: rgba(212, 175, 55, 0.1); border: 2px solid rgba(212, 175, 55, 0.3); border-radius: 10px; color: #d4af37; font-size: 1em; text-align: center; }
+        .age-input::placeholder { color: rgba(212, 175, 55, 0.5); }
+        .age-input:focus { outline: none; border-color: #d4af37; }
+        
         /* 照片来源选择 */
-        .photo-source-section { background: rgba(0,0,0,0.25); border: 2px dashed rgba(212, 175, 55, 0.4); border-radius: 16px; padding: 35px 25px; text-align: center; margin-bottom: 20px; }
+        .photo-source-section { display: none; background: rgba(0,0,0,0.25); border: 2px dashed rgba(212, 175, 55, 0.4); border-radius: 16px; padding: 35px 25px; text-align: center; margin-bottom: 20px; }
         .photo-source-buttons { display: flex; gap: 15px; justify-content: center; }
         .source-btn { flex: 1; max-width: 140px; padding: 20px 15px; background: rgba(212, 175, 55, 0.1); border: 2px solid rgba(212, 175, 55, 0.3); border-radius: 16px; color: #d4af37; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 8px; }
         .source-btn:active { background: rgba(212, 175, 55, 0.2); transform: scale(0.95); }
@@ -166,7 +179,6 @@
             <!-- 隐藏的文件输入 -->
             <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display: none;" onchange="handleFileSelect(event)">
             <input type="file" id="albumInput" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
-        </div>
         </div>
 
         <!-- 照片预览 -->
@@ -329,6 +341,10 @@
             document.querySelectorAll('.gender-btn').forEach(btn => {
                 btn.classList.toggle('selected', btn.dataset.gender === gender);
             });
+            // 如果年龄也输入了，自动显示照片来源
+            if (userAge) {
+                showPhotoSource();
+            }
         }
 
         function validateAge() {
@@ -340,7 +356,16 @@
                 userAge = null;
             } else {
                 userAge = age;
+                // 如果性别也选择了，自动显示照片来源
+                if (userGender) {
+                    showPhotoSource();
+                }
             }
+        }
+
+        function showPhotoSource() {
+            document.getElementById('infoSection').style.display = 'none';
+            document.getElementById('photoSourceSection').style.display = 'block';
         }
 
         function checkInfoAndUpload() {
