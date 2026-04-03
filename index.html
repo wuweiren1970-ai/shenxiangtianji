@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <!-- iPhone 优化 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
+    
+    <!-- 分享卡片优化 -->
+    <meta property="og:title" content="神相天机 - 测测你的面相">
+    <meta property="og:description" content="AI面相分析，一窥天机">
+    <meta property="og:type" content="website">
+    <meta name="twitter:card" content="summary_large_image">
+    
+    <title>神相天机 - 测测你的面相</title>
+    
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Serif SC", serif;
+            background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            min-height: -webkit-fill-available;
+            color: #d4af37;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 15px;
+            padding-top: env(safe-area-inset-top);
+        }
+
+        /* 头部 */
+        .header {
+            text-align: center;
+            padding: 20px 0 15px;
+            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 1.8em;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            letter-spacing: 0.2em;
+            font-weight: 600;
+        }
+
+        .header .subtitle {
+            font-size: 0.85em;
+            color: #b8860b;
+            margin-top: 8px;
+        }
+
+        /* 免责声明 */
+        .disclaimer {
+            background: rgba(212, 175, 55, 0.08);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-size: 0.75em;
+            color: #c9b037;
+            line-height: 1.5;
+        }
+
+        /* 上传区域 */
+        .upload-section {
+            background: rgba(0,0,0,0.25);
+            border: 2px dashed rgba(212, 175, 55, 0.4);
+            border-radius: 16px;
+            padding: 35px 25px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .upload-section:active {
+            background: rgba(212, 175, 55, 0.1);
+            transform: scale(0.98);
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+            color: #1a1a2e;
+            border: none;
+            padding: 14px 35px;
+            font-size: 1.05em;
+            border-radius: 25px;
+            font-family: inherit;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn:active {
+            transform: scale(0.95);
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        /* 照片预览 */
+        .preview-section {
+            display: none;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .preview-section.active {
+            display: block;
+        }
+
+        .photo-frame {
+            display: inline-block;
+            border: 5px solid #d4af37;
+            border-radius: 12px;
+            padding: 6px;
+            background: #2a2a3e;
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25);
+            position: relative;
+            max-width: 100%;
+        }
+
+        #previewImg {
+            max-width: 100%;
+            max-height: 45vh;
+            border-radius: 6px;
+            display: block;
+        }
+
+        #faceCanvas {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            pointer-events: none;
+            max-width: calc(100% - 12px);
+            max-height: calc(45vh - 12px);
+        }
+
+        .face-landmarks-info {
+            margin-top: 12px;
+            padding: 10px;
+            background: rgba(212, 175, 55, 0.1);
+            border-radius: 8px;
+            font-size: 0.85em;
+        }
+
+        /* 按钮 */
+        .analyze-btn, .share-btn, .restart-btn {
+            border: none;
+            padding: 14px 40px;
+            font-size: 1em;
+            border-radius: 25px;
+            font-family: inherit;
+            font-weight: 600;
+            margin-top: 15px;
+            width: 100%;
+            max-width: 280px;
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #dc143c 0%, #8b0000 100%);
+            color: #fff;
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.5;
+        }
+
+        .analyze-btn:not(:disabled):active {
+            transform: scale(0.97);
+        }
+
+        /* 加载 */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 50px 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(212, 175, 55, 0.2);
+            border-top-color: #d4af37;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.1em;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        /* 结果 */
+        .result-section {
+            display: none;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+
+        .result-section.active {
+            display: block;
+        }
+
+        .result-title {
+            text-align: center;
+            font-size: 1.4em;
+            margin-bottom: 15px;
+            color: #d4af37;
+        }
+
+        .classical-text {
+            font-size: 1em;
+            color: #f4e4c1;
+            text-align: center;
+            padding: 15px;
+            background: rgba(139, 69, 19, 0.25);
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-style: italic;
+            line-height: 1.6;
+        }
+
+        .fortune-item {
+            margin: 12px 0;
+            padding: 12px;
+            background: rgba(212, 175, 55, 0.08);
+            border-left: 3px solid #d4af37;
+            border-radius: 0 10px 10px 0;
+        }
+
+        .fortune-label {
+            font-weight: 600;
+            color: #d4af37;
+            margin-bottom: 6px;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .modern-text {
+            font-size: 0.9em;
+            color: #e8dcc8;
+            line-height: 1.7;
+        }
+
+        .face-features {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .feature-tag {
+            background: rgba(212, 175, 55, 0.15);
+            padding: 6px 10px;
+            border-radius: 15px;
+            text-align: center;
+            font-size: 0.8em;
+        }
+
+        .final-blessing {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(184, 134, 11, 0.15) 100%);
+            border-radius: 12px;
+            font-size: 1em;
+            color: #ffd700;
+            line-height: 1.6;
+        }
+
+        /* 分享区 */
+        .share-section {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .share-btn {
+            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
+            color: #1a1a2e;
+            margin: 0;
+        }
+
+        .share-btn.secondary {
+            background: transparent;
+            color: #d4af37;
+            border: 2px solid #d4af37;
+        }
+
+        .share-btn:active {
+            transform: scale(0.97);
+        }
+
+        .restart-btn {
+            background: transparent;
+            color: #d4af37;
+            border: 2px solid #d4af37;
+            margin-top: 15px;
+        }
+
+        /* 模态框 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.92);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            color: #d4af37;
+            font-size: 2em;
+            background: none;
+            border: none;
+        }
+
+        #posterCanvas {
+            width: 100%;
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
+        }
+
+        /* 分享提示 */
+        .share-hint {
+            background: rgba(212, 175, 55, 0.1);
+            border: 1px dashed #d4af37;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-size: 0.85em;
+            color: #c9b037;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .share-hint strong {
+            color: #ffd700;
+        }
+
+        /* iPhone 底部安全区 */
+        .safe-bottom {
+            height: env(safe-area-inset-bottom);
+        }
+
+        /* 装饰 */
+        .decoration {
+            text-align: center;
+            font-size: 1.5em;
+            margin: 15px 0;
+            opacity: 0.5;
+            letter-spacing: 0.3em;
+        }
+
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 头部 -->
+        <div class="header">
+            <h1>☯ 神相天机 ☯</h1>
+            <p class="subtitle">传承千年相术 · AI一窥天机</p>
+        </div>
+
+        <!-- 免责声明 -->
+        <div class="disclaimer">
+            ⚠️ 仅供娱乐参考，无科学依据<br>
+            相由心生，修心改命
+        </div>
+
+        <!-- 上传区域 -->
+        <div class="upload-section" id="uploadSection" onclick="document.getElementById('fileInput').click()">
+            <div class="decoration">☯ ☯ ☯</div>
+            <p style="margin-bottom: 18px; font-size: 0.95em; line-height: 1.6;">
+                上传正面清晰照片<br>
+                <span style="font-size: 0.85em; opacity: 0.8;">AI神相为您解读面相</span>
+            </p>
+            <button class="upload-btn">
+                📷 选择照片
+            </button>
+            <input type="file" id="fileInput" accept="image/*" capture="user">
+        </div>
+
+        <!-- 照片预览 -->
+        <div class="preview-section" id="previewSection">
+            <div class="photo-frame">
+                <img id="previewImg" src="" alt="预览">
+                <canvas id="faceCanvas"></canvas>
+            </div>
+            <div class="face-landmarks-info" id="landmarksInfo" style="display: none;">
+                <p>✓ 已识别面部特征</p>
+            </div>
+            <button class="analyze-btn" id="analyzeBtn" onclick="startAnalyze()" disabled>
+                🔮 开始测算
+            </button>
+        </div>
+
+        <!-- 加载动画 -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p class="loading-text">正在观气色、察五官...</p>
+            <p style="margin-top: 10px; opacity: 0.6; font-size: 0.85em;">天机不可泄露，稍安勿躁</p>
+        </div>
+
+        <!-- 结果展示 -->
+        <div class="result-section" id="resultSection">
+            <h2 class="result-title">📜 面相批语</h2>
+            
+            <div class="classical-text" id="classicalText"></div>
+            
+            <div class="result-content" id="resultContent"></div>
+            
+            <div class="final-blessing" id="finalBlessing"></div>
+            
+            <!-- 分享区域 -->
+            <div class="share-section">
+                <button class="share-btn" onclick="generatePoster()">
+                    📷 生成分享海报
+                </button>
+                <button class="share-btn secondary" onclick="shareResult()">
+                    💬 分享给朋友
+                </button>
+            </div>
+            
+            <button class="restart-btn" onclick="restart()">重新测算</button>
+        </div>
+        
+        <div class="safe-bottom"></div>
+    </div>
+
+    <!-- 海报模态框 -->
+    <div class="modal" id="posterModal" onclick="if(event.target===this)closeModal()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div class="modal-content">
+            <canvas id="posterCanvas"></canvas>
+            <button class="share-btn" onclick="savePoster()" style="margin-top: 15px;">
+                💾 保存到相册
+            </button>
+            <div class="share-hint">
+                <strong>保存后分享：</strong><br>
+                长按图片 → 存储图像<br>
+                然后去微信/朋友圈分享
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============ 数据库 ============
+        const classicalPhrases = {
+            general: ["眉如远山含黛，目似秋水横波", "天庭饱满，地阁方圆", "鼻如悬胆，口若含丹", "耳白于面，名闻四方", "龙眉凤目，威仪自生", "唇红齿白，言语真诚", "额宽四指，聪明伶俐", "下巴圆润，晚景安康", "面如冠玉，气质非凡", "神采奕奕，气宇轩昂"],
+            eyebrow: ["眉清目秀，聪慧过人", "浓眉大眼，义薄云天", "眉长过目，福寿绵长"],
+            eye: ["眼若星辰，明察秋毫", "目光如炬，志向远大", "眼含笑意，人缘极佳"],
+            nose: ["鼻梁高挺，财运亨通", "鼻头圆润，心地善良", "鼻翼丰满，聚财有方"],
+            mouth: ["口方唇红，食禄丰盈", "嘴角上扬，乐观开朗", "唇厚齿齐，重情重义"],
+            ear: ["耳大垂肩，福气深厚", "耳白于面，名声远播", "耳轮分明，智慧过人"]
+        };
+
+        const personalityTypes = [
+            { type: "仁厚型", desc: "面容和善，待人以诚", traits: ["心地善良", "乐于助人", "重情重义", "人缘极佳"], careers: ["教育", "医疗", "公益"], element: "土" },
+            { type: "智慧型", desc: "目光如炬，思维敏捷", traits: ["聪慧过人", "善于思考", "洞察力强", "学习能力强"], careers: ["科研", "咨询", "金融"], element: "水" },
+            { type: "坚毅型", desc: "眉骨突出，意志坚定", traits: ["意志坚强", "百折不挠", "目标明确", "执行力强"], careers: ["管理", "创业", "军警"], element: "金" },
+            { type: "温和型", desc: "面容柔和，性情温顺", traits: ["性格温和", "善于倾听", "包容心强", "家庭和睦"], careers: ["艺术", "设计", "服务"], element: "木" },
+            { type: "进取型", desc: "目光炯炯，神采飞扬", traits: ["积极进取", "敢于挑战", "领导力强", "事业有成"], careers: ["销售", "市场", "管理"], element: "火" },
+            { type: "艺术型", desc: "眼神灵动，气质独特", traits: ["富有创意", "审美独特", "情感丰富", "才华横溢"], careers: ["艺术", "设计", "写作"], element: "木" },
+            { type: "稳重型", desc: "面容方正，举止沉稳", traits: ["踏实稳重", "责任心强", "值得信赖", "晚年运佳"], careers: ["财务", "法律", "公务员"], element: "土" },
+            { type: "灵动型", desc: "眼神流转，反应敏捷", traits: ["机智灵活", "善于应变", "口才出众", "社交能力强"], careers: ["媒体", "公关", "主持"], element: "火" }
+        ];
+
+        const careerFortunes = [
+            { text: "事业如旭日东升，宜把握机遇，大展宏图", level: "大吉" },
+            { text: "财运亨通，正财偏财皆有收获", level: "吉" },
+            { text: "贵人运旺，得遇良师益友提携", level: "吉" },
+            { text: "宜稳扎稳打，厚积薄发，终成大器", level: "中吉" },
+            { text: "思维活跃，适合创意、策划类工作", level: "吉" },
+            { text: "人际关系和谐，团队协作得心应手", level: "吉" },
+            { text: "今年有升迁之机，宜主动争取", level: "大吉" },
+            { text: "偏财运佳，可适当投资理财", level: "中吉" }
+        ];
+
+        const loveFortunes = [
+            { text: "桃花运旺，良缘将至，宜把握", status: "单身" },
+            { text: "感情专一，白头偕老之相", status: "已婚" },
+            { text: "异性缘佳，但需谨慎选择", status: "单身" },
+            { text: "晚婚更吉，先立业后成家", status: "单身" },
+            { text: "夫妻宫饱满，婚姻美满幸福", status: "已婚" },
+            { text: "感情之路虽有波折，终成眷属", status: "恋爱" },
+            { text: "今年有喜事临门之兆", status: "恋爱" },
+            { text: "红鸾星动，有望遇到正缘", status: "单身" }
+        ];
+
+        const healthFortunes = ["身体康健，精神饱满", "宜多运动，保持身心平衡", "注意饮食规律，脾胃需调养", "精力充沛，但忌过度劳累", "心态平和，百病不侵", "养生之道在于动静结合", "宜早睡早起，养精蓄锐"];
+
+        const blessings = [
+            "相由心生，境随心转。修心养性，福泽绵长。",
+            "命由己造，福自己求。行善积德，天必佑之。",
+            "面相乃一时之表，心相乃一世之根。心存善念，必得善果。",
+            "天机玄妙，仅供参考。把握当下，创造未来。",
+            "三分天注定，七分靠打拼。爱拼才会赢。"
+        ];
+
+        // ============ 全局变量 ============
+        let faceMesh = null, faceFeatures = null, currentResult = null;
+
+        // ============ 初始化 ============
+        async function initFaceMesh() {
+            faceMesh = new FaceMesh({
+                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+            });
+            faceMesh.setOptions({ maxNumFaces: 1, refineLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+            faceMesh.onResults(onFaceResults);
+        }
+
+        function onFaceResults(results) {
+            const canvas = document.getElementById('faceCanvas');
+            const ctx = canvas.getContext('2d');
+            const img = document.getElementById('previewImg');
+            
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (results.multiFaceLandmarks?.length > 0) {
+                const landmarks = results.multiFaceLandmarks[0];
+                drawConnectors(ctx, landmarks, FACEMESH_TESSELATION, { color: '#d4af37', lineWidth: 1 });
+                drawConnectors(ctx, landmarks, FACEMESH_FACE_OVAL, { color: '#d4af37', lineWidth: 2 });
+                faceFeatures = extractFaceFeatures(landmarks);
+                document.getElementById('landmarksInfo').innerHTML = '<p>✓ 已识别面部特征，可以开始测算</p>';
+                document.getElementById('analyzeBtn').disabled = false;
+            } else {
+                faceFeatures = null;
+                document.getElementById('landmarksInfo').innerHTML = '<p style="color: #ff6b6b;">⚠️ 未检测到面部，请重新选择照片</p>';
+                document.getElementById('analyzeBtn').disabled = true;
+            }
+            document.getElementById('landmarksInfo').style.display = 'block';
+        }
+
+        function extractFaceFeatures(landmarks) {
+            const leftEye = landmarks[33], rightEye = landmarks[263], noseTip = landmarks[1];
+            const chin = landmarks[152], forehead = landmarks[10];
+            
+            const faceHeight = Math.sqrt(Math.pow(chin.x - forehead.x, 2) + Math.pow(chin.y - forehead.y, 2));
+            const faceWidth = Math.sqrt(Math.pow(landmarks[454].x - landmarks[234].x, 2) + Math.pow(landmarks[454].y - landmarks[234].y, 2));
+            const ratio = faceHeight / faceWidth;
+            
+            let faceShape = "oval";
+            if (ratio > 1.4) faceShape = "long";
+            else if (ratio < 1.2) faceShape = "round";
+            else if (faceWidth / faceHeight > 0.8) faceShape = "square";
+            
+            const eyeSize = Math.sqrt(Math.pow(landmarks[133].x - landmarks[33].x, 2)) / faceWidth;
+            const eyebrowCurve = landmarks[105].y - landmarks[55].y;
+            const noseWidth = Math.sqrt(Math.pow(landmarks[436].x - landmarks[206].x, 2)) / faceWidth;
+            
+            return {
+                faceShape,
+                eyeSize: eyeSize > 0.15 ? "large" : (eyeSize > 0.12 ? "medium" : "small"),
+                eyebrowShape: eyebrowCurve > 0.02 ? "curved" : "straight",
+                noseWidth: noseWidth > 0.12 ? "wide" : "narrow",
+                hasDetected: true
+            };
+        }
+
+        // ============ 文件上传 ============
+        document.getElementById('fileInput').addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async function(event) {
+                const img = document.getElementById('previewImg');
+                img.src = event.target.result;
+                img.onload = async function() {
+                    document.getElementById('uploadSection').style.display = 'none';
+                    document.getElementById('previewSection').classList.add('active');
+                    if (!faceMesh) await initFaceMesh();
+                    await faceMesh.send({ image: img });
+                };
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // ============ 分析 ============
+        function startAnalyze() {
+            document.getElementById('previewSection').classList.remove('active');
+            document.getElementById('loading').classList.add('active');
+            
+            setTimeout(() => {
+                generateResult();
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('resultSection').classList.add('active');
+            }, 2500);
+        }
+
+        function generateResult() {
+            const features = faceFeatures || { faceShape: "oval", eyeSize: "medium", eyebrowShape: "curved", noseWidth: "medium" };
+            
+            let personalityIndex = 0;
+            if (features.faceShape === "round") personalityIndex = 0;
+            else if (features.eyeSize === "large") personalityIndex = 1;
+            else if (features.eyebrowShape === "straight") personalityIndex = 2;
+            else if (features.faceShape === "oval") personalityIndex = 3;
+            else if (features.noseWidth === "wide") personalityIndex = 4;
+            else personalityIndex = Math.floor(Math.random() * personalityTypes.length);
+            
+            const personality = personalityTypes[personalityIndex];
+            let classical = classicalPhrases.general[Math.floor(Math.random() * classicalPhrases.general.length)];
+            if (features.eyebrowShape === "curved") classical = classicalPhrases.eyebrow[Math.floor(Math.random() * classicalPhrases.eyebrow.length)];
+            else if (features.eyeSize === "large") classical = classicalPhrases.eye[Math.floor(Math.random() * classicalPhrases.eye.length)];
+            
+            const career = careerFortunes[Math.floor(Math.random() * careerFortunes.length)];
+            const love = loveFortunes[Math.floor(Math.random() * loveFortunes.length)];
+            const health = healthFortunes[Math.floor(Math.random() * healthFortunes.length)];
+            
+            currentResult = { classical, personality, career, love, health, features, blessing: blessings[Math.floor(Math.random() * blessings.length)] };
+            
+            document.getElementById('classicalText').textContent = `「${classical}」`;
+            
+            let resultHTML = `
+                <div class="fortune-item">
+                    <div class="fortune-label">☯ 五行属性</div>
+                    <div class="modern-text">${personality.element}行 · ${personality.type}</div>
+                </div>
+            `;
+            
+            if (features.hasDetected) {
+                resultHTML += `
+                    <div class="fortune-item">
+                        <div class="fortune-label">👤 面部特征</div>
+                        <div class="face-features">
+                            <div class="feature-tag">${getFaceShapeName(features.faceShape)}</div>
+                            <div class="feature-tag">${getEyeSizeName(features.eyeSize)}</div>
+                            <div class="feature-tag">${getEyebrowName(features.eyebrowShape)}</div>
+                            <div class="feature-tag">${getNoseName(features.noseWidth)}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            resultHTML += `
+                <div class="fortune-item">
+                    <div class="fortune-label">🎭 性格特点</div>
+                    <div class="modern-text">${personality.desc}。<br>${personality.traits.join('、')}。适合：${personality.careers.join('、')}。</div>
+                </div>
+                <div class="fortune-item">
+                    <div class="fortune-label">💼 事业前程 [${career.level}]</div>
+                    <div class="modern-text">${career.text}</div>
+                </div>
+                <div class="fortune-item">
+                    <div class="fortune-label">💕 姻缘情感 [${love.status}]</div>
+                    <div class="modern-text">${love.text}</div>
+                </div>
+                <div class="fortune-item">
+                    <div class="fortune-label">🌿 健康运势</div>
+                    <div class="modern-text">${health}</div>
+                </div>
+            `;
+            
+            document.getElementById('resultContent').innerHTML = resultHTML;
+            document.getElementById('finalBlessing').textContent = currentResult.blessing;
+        }
+
+        function getFaceShapeName(s) { return { round: "圆润", oval: "椭圆", long: "长形", square: "方正" }[s] || s; }
+        function getEyeSizeName(s) { return { large: "大而有神", medium: "适中", small: "细长" }[s] || s; }
+        function getEyebrowName(s) { return { curved: "弯曲", straight: "平直" }[s] || s; }
+        function getNoseName(s) { return { wide: "宽鼻", narrow: "窄鼻" }[s] || s; }
+
+        // ============ 海报生成 ============
+        async function generatePoster() {
+            if (!currentResult) return;
+            
+            const canvas = document.getElementById('posterCanvas');
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 2;
+            
+            canvas.width = 600 * dpr;
+            canvas.height = 900 * dpr;
+            canvas.style.width = '100%';
+            canvas.style.height = 'auto';
+            ctx.scale(dpr, dpr);
+            
+            // 背景
+            const grad = ctx.createLinearGradient(0, 0, 600, 900);
+            grad.addColorStop(0, '#1a1a2e');
+            grad.addColorStop(0.5, '#16213e');
+            grad.addColorStop(1, '#0f3460');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, 600, 900);
+            
+            // 边框
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 6;
+            ctx.strokeRect(15, 15, 570, 870);
+            ctx.lineWidth = 1;
+            ctx.strokeRect(25, 25, 550, 850);
+            
+            // 标题
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 32px -apple-system, PingFang SC';
+            ctx.textAlign = 'center';
+            ctx.fillText('☯ 神相天机 ☯', 300, 70);
+            ctx.font = '16px -apple-system, PingFang SC';
+            ctx.fillStyle = '#b8860b';
+            ctx.fillText('AI面相分析', 300, 95);
+            
+            // 古典批语
+            ctx.fillStyle = '#f4e4c1';
+            ctx.font = 'italic 16px -apple-system, PingFang SC';
+            wrapText(ctx, `「${currentResult.classical}」`, 300, 140, 520, 24);
+            
+            // 分隔线
+            ctx.strokeStyle = '#d4af37';
+            ctx.beginPath();
+            ctx.moveTo(80, 180);
+            ctx.lineTo(520, 180);
+            ctx.stroke();
+            
+            // 内容
+            let y = 215;
+            ctx.textAlign = 'left';
+            
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 15px -apple-system, PingFang SC';
+            ctx.fillText(`☯ ${currentResult.personality.element}行 · ${currentResult.personality.type}`, 50, y);
+            y += 28;
+            
+            ctx.fillStyle = '#e8dcc8';
+            ctx.font = '13px -apple-system, PingFang SC';
+            wrapText(ctx, `${currentResult.personality.desc}。${currentResult.personality.traits.join('、')}。`, 50, y, 500, 20);
+            y += 45;
+            
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 15px -apple-system, PingFang SC';
+            ctx.fillText(`💼 事业 [${currentResult.career.level}]`, 50, y);
+            y += 24;
+            ctx.fillStyle = '#e8dcc8';
+            ctx.font = '13px -apple-system, PingFang SC';
+            wrapText(ctx, currentResult.career.text, 50, y, 500, 20);
+            y += 42;
+            
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 15px -apple-system, PingFang SC';
+            ctx.fillText(`💕 姻缘 [${currentResult.love.status}]`, 50, y);
+            y += 24;
+            ctx.fillStyle = '#e8dcc8';
+            wrapText(ctx, currentResult.love.text, 50, y, 500, 20);
+            y += 42;
+            
+            ctx.fillStyle = '#d4af37';
+            ctx.font = 'bold 15px -apple-system, PingFang SC';
+            ctx.fillText(`🌿 健康`, 50, y);
+            y += 24;
+            ctx.fillStyle = '#e8dcc8';
+            wrapText(ctx, currentResult.health, 50, y, 500, 20);
+            y += 50;
+            
+            // 分隔线
+            ctx.strokeStyle = '#d4af37';
+            ctx.beginPath();
+            ctx.moveTo(80, y);
+            ctx.lineTo(520, y);
+            ctx.stroke();
+            y += 30;
+            
+            // 祝福
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'italic 15px -apple-system, PingFang SC';
+            ctx.textAlign = 'center';
+            wrapText(ctx, currentResult.blessing, 300, y, 520, 22);
+            
+            // 底部
+            ctx.fillStyle = '#b8860b';
+            ctx.font = '11px -apple-system, PingFang SC';
+            ctx.fillText('仅供娱乐 · 无科学依据 · 扫码测面相', 300, 870);
+            
+            document.getElementById('posterModal').classList.add('active');
+        }
+
+        function wrapText(ctx, text, x, y, maxW, lh) {
+            const chars = text.split('');
+            let line = '';
+            for (let i = 0; i < chars.length; i++) {
+                const test = line + chars[i];
+                if (ctx.measureText(test).width > maxW && i > 0) {
+                    ctx.fillText(line, x, y);
+                    line = chars[i];
+                    y += lh;
+                } else {
+                    line = test;
+                }
+            }
+            ctx.fillText(line, x, y);
+        }
+
+        function closeModal() {
+            document.getElementById('posterModal').classList.remove('active');
+        }
+
+        async function savePoster() {
+            const canvas = document.getElementById('posterCanvas');
+            try {
+                const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+                const file = new File([blob], `神相天机_${Date.now()}.png`, { type: 'image/png' });
+                
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: '我的面相分析' });
+                } else {
+                    const url = canvas.toDataURL();
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `神相天机_${Date.now()}.png`;
+                    a.click();
+                }
+            } catch (e) {
+                const url = canvas.toDataURL();
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `神相天机_${Date.now()}.png`;
+                a.click();
+            }
+        }
+
+        // ============ 分享 ============
+        async function shareResult() {
+            if (!currentResult) return;
+            
+            const text = `【神相天机】\n${currentResult.classical}\n\n五行：${currentResult.personality.element}行 · ${currentResult.personality.type}\n性格：${currentResult.personality.traits.join('、')}\n\n事业：${currentResult.career.text}\n姻缘：${currentResult.love.text}\n\n${currentResult.blessing}\n\n（仅供娱乐，无科学依据）`;
+            
+            try {
+                if (navigator.share) {
+                    await navigator.share({ title: '神相天机 - 我的面相分析', text: text });
+                } else {
+                    await navigator.clipboard.writeText(text);
+                    alert('测算结果已复制！去粘贴分享给朋友吧');
+                }
+            } catch (e) {
+                await navigator.clipboard.writeText(text);
+                alert('测算结果已复制！去粘贴分享给朋友吧');
+            }
+        }
+
+        // ============ 重新开始 ============
+        function restart() {
+            document.getElementById('resultSection').classList.remove('active');
+            document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('landmarksInfo').style.display = 'none';
+            document.getElementById('analyzeBtn').disabled = true;
+            faceFeatures = null;
+            currentResult = null;
+        }
+    </script>
+</body>
+</html>
