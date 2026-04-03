@@ -2,447 +2,152 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <!-- iPhone 优化 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="format-detection" content="telephone=no">
-    
-    <!-- 分享卡片优化 -->
     <meta property="og:title" content="神相天机 - 测测你的面相">
     <meta property="og:description" content="AI面相分析，一窥天机">
     <meta property="og:type" content="website">
     <meta name="twitter:card" content="summary_large_image">
-    
     <title>神相天机 - 测测你的面相</title>
-    
-    <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body {
             font-family: -apple-system, "PingFang SC", "Hiragino Sans GB", "Noto Serif SC", serif;
             background: linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            min-height: 100vh;
-            min-height: -webkit-fill-available;
-            color: #d4af37;
-            padding-bottom: env(safe-area-inset-bottom);
+            min-height: 100vh; min-height: -webkit-fill-available;
+            color: #d4af37; padding-bottom: env(safe-area-inset-bottom);
         }
-
-        .container {
-            max-width: 100%;
-            margin: 0 auto;
-            padding: 15px;
-            padding-top: env(safe-area-inset-top);
-        }
-
-        /* 头部 */
-        .header {
-            text-align: center;
-            padding: 20px 0 15px;
-            border-bottom: 1px solid rgba(212, 175, 55, 0.3);
-            margin-bottom: 20px;
-        }
-
-        .header h1 {
-            font-size: 1.8em;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            letter-spacing: 0.2em;
-            font-weight: 600;
-        }
-
-        .header .subtitle {
-            font-size: 0.85em;
-            color: #b8860b;
-            margin-top: 8px;
-        }
-
-        /* 免责声明 */
-        .disclaimer {
-            background: rgba(212, 175, 55, 0.08);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 20px;
-            text-align: center;
-            font-size: 0.75em;
-            color: #c9b037;
-            line-height: 1.5;
-        }
-
+        .container { max-width: 100%; margin: 0 auto; padding: 15px; padding-top: env(safe-area-inset-top); }
+        .header { text-align: center; padding: 20px 0 15px; border-bottom: 1px solid rgba(212, 175, 55, 0.3); margin-bottom: 20px; }
+        .header h1 { font-size: 1.8em; text-shadow: 0 2px 4px rgba(0,0,0,0.5); letter-spacing: 0.2em; font-weight: 600; }
+        .header .subtitle { font-size: 0.85em; color: #b8860b; margin-top: 8px; }
+        .disclaimer { background: rgba(212, 175, 55, 0.08); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 20px; text-align: center; font-size: 0.75em; color: #c9b037; line-height: 1.5; }
+        
+        /* 信息输入区域 */
+        .info-section { background: rgba(0,0,0,0.25); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 20px; margin-bottom: 20px; }
+        .info-title { text-align: center; font-size: 1em; margin-bottom: 15px; color: #d4af37; }
+        .info-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .info-item { flex: 1; }
+        .info-label { font-size: 0.85em; color: #b8860b; margin-bottom: 8px; display: block; }
+        .gender-options { display: flex; gap: 10px; }
+        .gender-btn { flex: 1; padding: 12px; background: rgba(212, 175, 55, 0.1); border: 2px solid rgba(212, 175, 55, 0.3); border-radius: 10px; color: #d4af37; font-size: 1em; cursor: pointer; transition: all 0.3s; }
+        .gender-btn.selected { background: #d4af37; color: #1a1a2e; border-color: #d4af37; }
+        .age-input { width: 100%; padding: 12px; background: rgba(212, 175, 55, 0.1); border: 2px solid rgba(212, 175, 55, 0.3); border-radius: 10px; color: #d4af37; font-size: 1em; text-align: center; }
+        .age-input::placeholder { color: rgba(212, 175, 55, 0.5); }
+        .age-input:focus { outline: none; border-color: #d4af37; }
+        
         /* 上传区域 */
-        .upload-section {
-            background: rgba(0,0,0,0.25);
-            border: 2px dashed rgba(212, 175, 55, 0.4);
-            border-radius: 16px;
-            padding: 35px 25px;
-            text-align: center;
-            margin-bottom: 20px;
-            transition: all 0.3s;
-        }
-
-        .upload-section:active {
-            background: rgba(212, 175, 55, 0.1);
-            transform: scale(0.98);
-        }
-
-        .upload-btn {
-            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
-            color: #1a1a2e;
-            border: none;
-            padding: 14px 35px;
-            font-size: 1.05em;
-            border-radius: 25px;
-            font-family: inherit;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .upload-btn:active {
-            transform: scale(0.95);
-        }
-
-        #fileInput {
-            display: none;
-        }
-
+        .upload-section { background: rgba(0,0,0,0.25); border: 2px dashed rgba(212, 175, 55, 0.4); border-radius: 16px; padding: 35px 25px; text-align: center; margin-bottom: 20px; transition: all 0.3s; }
+        .upload-section:active { background: rgba(212, 175, 55, 0.1); transform: scale(0.98); }
+        .upload-btn { background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #1a1a2e; border: none; padding: 14px 35px; font-size: 1.05em; border-radius: 25px; font-family: inherit; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; }
+        .upload-btn:active { transform: scale(0.95); }
+        #fileInput { display: none; }
+        
         /* 照片预览 */
-        .preview-section {
-            display: none;
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .preview-section.active {
-            display: block;
-        }
-
-        .photo-frame {
-            display: inline-block;
-            border: 5px solid #d4af37;
-            border-radius: 12px;
-            padding: 6px;
-            background: #2a2a3e;
-            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25);
-            position: relative;
-            max-width: 100%;
-        }
-
-        #previewImg {
-            max-width: 100%;
-            max-height: 45vh;
-            border-radius: 6px;
-            display: block;
-        }
-
-        #faceCanvas {
-            position: absolute;
-            top: 6px;
-            left: 6px;
-            pointer-events: none;
-            max-width: calc(100% - 12px);
-            max-height: calc(45vh - 12px);
-        }
-
-        .face-landmarks-info {
-            margin-top: 12px;
-            padding: 10px;
-            background: rgba(212, 175, 55, 0.1);
-            border-radius: 8px;
-            font-size: 0.85em;
-        }
-
+        .preview-section { display: none; text-align: center; margin-bottom: 20px; }
+        .preview-section.active { display: block; }
+        .photo-frame { display: inline-block; border: 5px solid #d4af37; border-radius: 12px; padding: 6px; background: #2a2a3e; box-shadow: 0 4px 20px rgba(212, 175, 55, 0.25); position: relative; max-width: 100%; }
+        #previewImg { max-width: 100%; max-height: 45vh; border-radius: 6px; display: block; }
+        #faceCanvas { position: absolute; top: 6px; left: 6px; pointer-events: none; max-width: calc(100% - 12px); max-height: calc(45vh - 12px); }
+        .face-landmarks-info { margin-top: 12px; padding: 10px; background: rgba(212, 175, 55, 0.1); border-radius: 8px; font-size: 0.85em; }
+        
         /* 按钮 */
-        .analyze-btn, .share-btn, .restart-btn {
-            border: none;
-            padding: 14px 40px;
-            font-size: 1em;
-            border-radius: 25px;
-            font-family: inherit;
-            font-weight: 600;
-            margin-top: 15px;
-            width: 100%;
-            max-width: 280px;
-        }
-
-        .analyze-btn {
-            background: linear-gradient(135deg, #dc143c 0%, #8b0000 100%);
-            color: #fff;
-        }
-
-        .analyze-btn:disabled {
-            opacity: 0.5;
-        }
-
-        .analyze-btn:not(:disabled):active {
-            transform: scale(0.97);
-        }
-
+        .analyze-btn, .share-btn, .restart-btn { border: none; padding: 14px 40px; font-size: 1em; border-radius: 25px; font-family: inherit; font-weight: 600; margin-top: 15px; width: 100%; max-width: 280px; }
+        .analyze-btn { background: linear-gradient(135deg, #dc143c 0%, #8b0000 100%); color: #fff; }
+        .analyze-btn:disabled { opacity: 0.5; }
+        .analyze-btn:not(:disabled):active { transform: scale(0.97); }
+        
         /* 加载 */
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 50px 20px;
-        }
-
-        .loading.active {
-            display: block;
-        }
-
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(212, 175, 55, 0.2);
-            border-top-color: #d4af37;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            font-size: 1.1em;
-            animation: pulse 1.5s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 0.5; }
-            50% { opacity: 1; }
-        }
-
+        .loading { display: none; text-align: center; padding: 50px 20px; }
+        .loading.active { display: block; }
+        .spinner { width: 50px; height: 50px; border: 3px solid rgba(212, 175, 55, 0.2); border-top-color: #d4af37; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .loading-text { font-size: 1.1em; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+        
         /* 结果 */
-        .result-section {
-            display: none;
-            background: rgba(0,0,0,0.3);
-            border: 1px solid rgba(212, 175, 55, 0.3);
-            border-radius: 16px;
-            padding: 20px;
-            margin-top: 15px;
-        }
-
-        .result-section.active {
-            display: block;
-        }
-
-        .result-title {
-            text-align: center;
-            font-size: 1.4em;
-            margin-bottom: 15px;
-            color: #d4af37;
-        }
-
-        .classical-text {
-            font-size: 1em;
-            color: #f4e4c1;
-            text-align: center;
-            padding: 15px;
-            background: rgba(139, 69, 19, 0.25);
-            border-radius: 10px;
-            margin-bottom: 15px;
-            font-style: italic;
-            line-height: 1.6;
-        }
-
-        .fortune-item {
-            margin: 12px 0;
-            padding: 12px;
-            background: rgba(212, 175, 55, 0.08);
-            border-left: 3px solid #d4af37;
-            border-radius: 0 10px 10px 0;
-        }
-
-        .fortune-label {
-            font-weight: 600;
-            color: #d4af37;
-            margin-bottom: 6px;
-            font-size: 0.95em;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        .modern-text {
-            font-size: 0.9em;
-            color: #e8dcc8;
-            line-height: 1.7;
-        }
-
-        .face-features {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 8px;
-            margin-top: 8px;
-        }
-
-        .feature-tag {
-            background: rgba(212, 175, 55, 0.15);
-            padding: 6px 10px;
-            border-radius: 15px;
-            text-align: center;
-            font-size: 0.8em;
-        }
-
-        .final-blessing {
-            text-align: center;
-            margin-top: 20px;
-            padding: 15px;
-            background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(184, 134, 11, 0.15) 100%);
-            border-radius: 12px;
-            font-size: 1em;
-            color: #ffd700;
-            line-height: 1.6;
-        }
-
+        .result-section { display: none; background: rgba(0,0,0,0.3); border: 1px solid rgba(212, 175, 55, 0.3); border-radius: 16px; padding: 20px; margin-top: 15px; }
+        .result-section.active { display: block; }
+        .result-title { text-align: center; font-size: 1.4em; margin-bottom: 15px; color: #d4af37; }
+        .user-info-display { text-align: center; padding: 10px; background: rgba(212, 175, 55, 0.1); border-radius: 8px; margin-bottom: 15px; font-size: 0.9em; color: #b8860b; }
+        .classical-text { font-size: 1em; color: #f4e4c1; text-align: center; padding: 15px; background: rgba(139, 69, 19, 0.25); border-radius: 10px; margin-bottom: 15px; font-style: italic; line-height: 1.6; }
+        .fortune-item { margin: 12px 0; padding: 12px; background: rgba(212, 175, 55, 0.08); border-left: 3px solid #d4af37; border-radius: 0 10px 10px 0; }
+        .fortune-label { font-weight: 600; color: #d4af37; margin-bottom: 6px; font-size: 0.95em; display: flex; align-items: center; gap: 6px; }
+        .modern-text { font-size: 0.9em; color: #e8dcc8; line-height: 1.7; }
+        .face-features { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 8px; }
+        .feature-tag { background: rgba(212, 175, 55, 0.15); padding: 6px 10px; border-radius: 15px; text-align: center; font-size: 0.8em; }
+        .life-path { background: linear-gradient(135deg, rgba(139, 69, 19, 0.3) 0%, rgba(212, 175, 55, 0.2) 100%); border: 1px solid rgba(212, 175, 55, 0.4); border-radius: 12px; padding: 15px; margin: 15px 0; }
+        .life-path-title { font-size: 1.1em; color: #ffd700; text-align: center; margin-bottom: 12px; font-weight: 600; }
+        .timeline { position: relative; padding-left: 20px; }
+        .timeline::before { content: ''; position: absolute; left: 6px; top: 0; bottom: 0; width: 2px; background: linear-gradient(180deg, #d4af37 0%, #b8860b 100%); }
+        .timeline-item { position: relative; margin-bottom: 15px; padding-left: 15px; }
+        .timeline-item::before { content: '◆'; position: absolute; left: -17px; color: #d4af37; font-size: 0.8em; }
+        .timeline-age { font-size: 0.85em; color: #b8860b; margin-bottom: 4px; }
+        .timeline-text { font-size: 0.9em; color: #e8dcc8; line-height: 1.6; }
+        .final-blessing { text-align: center; margin-top: 20px; padding: 15px; background: linear-gradient(135deg, rgba(212, 175, 55, 0.15) 0%, rgba(184, 134, 11, 0.15) 100%); border-radius: 12px; font-size: 1em; color: #ffd700; line-height: 1.6; }
+        
         /* 分享区 */
-        .share-section {
-            margin-top: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .share-btn {
-            background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%);
-            color: #1a1a2e;
-            margin: 0;
-        }
-
-        .share-btn.secondary {
-            background: transparent;
-            color: #d4af37;
-            border: 2px solid #d4af37;
-        }
-
-        .share-btn:active {
-            transform: scale(0.97);
-        }
-
-        .restart-btn {
-            background: transparent;
-            color: #d4af37;
-            border: 2px solid #d4af37;
-            margin-top: 15px;
-        }
-
+        .share-section { margin-top: 20px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+        .share-btn { background: linear-gradient(135deg, #d4af37 0%, #b8860b 100%); color: #1a1a2e; margin: 0; }
+        .share-btn.secondary { background: transparent; color: #d4af37; border: 2px solid #d4af37; }
+        .share-btn:active { transform: scale(0.97); }
+        .restart-btn { background: transparent; color: #d4af37; border: 2px solid #d4af37; margin-top: 15px; }
+        
         /* 模态框 */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.92);
-            z-index: 2000;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
-
-        .modal-close {
-            position: absolute;
-            top: 15px;
-            right: 20px;
-            color: #d4af37;
-            font-size: 2em;
-            background: none;
-            border: none;
-        }
-
-        #posterCanvas {
-            width: 100%;
-            border-radius: 12px;
-            box-shadow: 0 4px 30px rgba(0,0,0,0.5);
-        }
-
-        /* 分享提示 */
-        .share-hint {
-            background: rgba(212, 175, 55, 0.1);
-            border: 1px dashed #d4af37;
-            border-radius: 10px;
-            padding: 15px;
-            margin-top: 15px;
-            font-size: 0.85em;
-            color: #c9b037;
-            text-align: center;
-            line-height: 1.6;
-        }
-
-        .share-hint strong {
-            color: #ffd700;
-        }
-
-        /* iPhone 底部安全区 */
-        .safe-bottom {
-            height: env(safe-area-inset-bottom);
-        }
-
-        /* 装饰 */
-        .decoration {
-            text-align: center;
-            font-size: 1.5em;
-            margin: 15px 0;
-            opacity: 0.5;
-            letter-spacing: 0.3em;
-        }
-
-        /* 隐藏滚动条 */
-        ::-webkit-scrollbar {
-            display: none;
-        }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.92); z-index: 2000; justify-content: center; align-items: center; padding: 20px; }
+        .modal.active { display: flex; }
+        .modal-content { width: 100%; max-width: 400px; text-align: center; }
+        .modal-close { position: absolute; top: 15px; right: 20px; color: #d4af37; font-size: 2em; background: none; border: none; }
+        #posterCanvas { width: 100%; border-radius: 12px; box-shadow: 0 4px 30px rgba(0,0,0,0.5); }
+        .share-hint { background: rgba(212, 175, 55, 0.1); border: 1px dashed #d4af37; border-radius: 10px; padding: 15px; margin-top: 15px; font-size: 0.85em; color: #c9b037; text-align: center; line-height: 1.6; }
+        .share-hint strong { color: #ffd700; }
+        .safe-bottom { height: env(safe-area-inset-bottom); }
+        .decoration { text-align: center; font-size: 1.5em; margin: 15px 0; opacity: 0.5; letter-spacing: 0.3em; }
+        ::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body>
     <div class="container">
-        <!-- 头部 -->
         <div class="header">
             <h1>☯ 神相天机 ☯</h1>
             <p class="subtitle">传承千年相术 · AI一窥天机</p>
         </div>
 
-        <!-- 免责声明 -->
-        <div class="disclaimer">
-            ⚠️ 仅供娱乐参考，无科学依据<br>
-            相由心生，修心改命
+        <div class="disclaimer">⚠️ 仅供娱乐参考，无科学依据<br>相由心生，修心改命</div>
+
+        <!-- 信息输入区域 -->
+        <div class="info-section" id="infoSection">
+            <div class="info-title">📋 请先填写基本信息</div>
+            <div class="info-row">
+                <div class="info-item">
+                    <label class="info-label">性别</label>
+                    <div class="gender-options">
+                        <button class="gender-btn" data-gender="male" onclick="selectGender('male')">👨 男</button>
+                        <button class="gender-btn" data-gender="female" onclick="selectGender('female')">👩 女</button>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <label class="info-label">年龄</label>
+                    <input type="number" class="age-input" id="ageInput" placeholder="输入年龄" min="1" max="120" onchange="validateAge()">
+                </div>
+            </div>
         </div>
 
         <!-- 上传区域 -->
-        <div class="upload-section" id="uploadSection" onclick="document.getElementById('fileInput').click()">
+        <div class="upload-section" id="uploadSection" onclick="checkInfoAndUpload()">
             <div class="decoration">☯ ☯ ☯</div>
             <p style="margin-bottom: 18px; font-size: 0.95em; line-height: 1.6;">
                 上传正面清晰照片<br>
                 <span style="font-size: 0.85em; opacity: 0.8;">AI神相为您解读面相</span>
             </p>
-            <button class="upload-btn">
-                📷 选择照片
-            </button>
-            <input type="file" id="fileInput" accept="image/*" capture="user">
+            <button class="upload-btn">📷 选择照片</button>
+            <input type="file" id="fileInput" accept="image/*" capture="user" onchange="handleFileSelect(event)">
         </div>
 
         <!-- 照片预览 -->
@@ -451,41 +156,28 @@
                 <img id="previewImg" src="" alt="预览">
                 <canvas id="faceCanvas"></canvas>
             </div>
-            <div class="face-landmarks-info" id="landmarksInfo" style="display: none;">
-                <p>✓ 已识别面部特征</p>
-            </div>
-            <button class="analyze-btn" id="analyzeBtn" onclick="startAnalyze()" disabled>
-                🔮 开始测算
-            </button>
+            <div class="face-landmarks-info" id="landmarksInfo" style="display: none;"><p>✓ 已识别面部特征</p></div>
+            <button class="analyze-btn" id="analyzeBtn" onclick="startAnalyze()" disabled>🔮 开始测算</button>
         </div>
 
         <!-- 加载动画 -->
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p class="loading-text">正在观气色、察五官...</p>
+            <p class="loading-text">正在观气色、察五官、推命理...</p>
             <p style="margin-top: 10px; opacity: 0.6; font-size: 0.85em;">天机不可泄露，稍安勿躁</p>
         </div>
 
         <!-- 结果展示 -->
         <div class="result-section" id="resultSection">
             <h2 class="result-title">📜 面相批语</h2>
-            
+            <div class="user-info-display" id="userInfoDisplay"></div>
             <div class="classical-text" id="classicalText"></div>
-            
             <div class="result-content" id="resultContent"></div>
-            
             <div class="final-blessing" id="finalBlessing"></div>
-            
-            <!-- 分享区域 -->
             <div class="share-section">
-                <button class="share-btn" onclick="generatePoster()">
-                    📷 生成分享海报
-                </button>
-                <button class="share-btn secondary" onclick="shareResult()">
-                    💬 分享给朋友
-                </button>
+                <button class="share-btn" onclick="generatePoster()">📷 生成分享海报</button>
+                <button class="share-btn secondary" onclick="shareResult()">💬 分享给朋友</button>
             </div>
-            
             <button class="restart-btn" onclick="restart()">重新测算</button>
         </div>
         
@@ -497,14 +189,8 @@
         <button class="modal-close" onclick="closeModal()">&times;</button>
         <div class="modal-content">
             <canvas id="posterCanvas"></canvas>
-            <button class="share-btn" onclick="savePoster()" style="margin-top: 15px;">
-                💾 保存到相册
-            </button>
-            <div class="share-hint">
-                <strong>保存后分享：</strong><br>
-                长按图片 → 存储图像<br>
-                然后去微信/朋友圈分享
-            </div>
+            <button class="share-btn" onclick="savePoster()" style="margin-top: 15px;">💾 保存到相册</button>
+            <div class="share-hint"><strong>保存后分享：</strong><br>长按图片 → 存储图像<br>然后去微信/朋友圈分享</div>
         </div>
     </div>
 
@@ -562,8 +248,113 @@
             "三分天注定，七分靠打拼。爱拼才会赢。"
         ];
 
+        // 人生阶段数据库
+        const lifeStages = {
+            youth: { // 18-30
+                male: {
+                    career: ["青年得志，宜早定方向", "初入职场，贵人相助", "创业良机，把握时机", "学业有成，前程似锦"],
+                    love: ["桃花运旺，正缘将近", "宜主动出击，莫失良机", "感情纯真，珍惜眼前人"],
+                    health: ["精力充沛，但忌熬夜", "注意运动，强身健体"]
+                },
+                female: {
+                    career: ["事业起步，稳步前行", "才华渐显，得人赏识", "宜多学习，积累实力"],
+                    love: ["姻缘天定，良缘将至", "温柔贤淑，得人青睐", "宜保持独立，不依附他人"],
+                    health: ["气血充足，注意保养", "忌贪凉，护好脾胃"]
+                }
+            },
+            prime: { // 31-45
+                male: {
+                    career: ["事业有成，蒸蒸日上", "中年转运，财源广进", "权势渐起，宜守正道", "创业有成，名利双收"],
+                    love: ["家庭和睦，夫妻恩爱", "桃花虽多，宜守本心", "子女缘深，后继有人"],
+                    health: ["注意三高，定期体检", "劳逸结合，勿过度操劳"]
+                },
+                female: {
+                    career: ["事业家庭两相宜", "贵人相助，步步高升", "才华得展，受人尊敬"],
+                    love: ["婚姻美满，白头偕老", "宜多关心家人", "子女孝顺，晚年有福"],
+                    health: ["注意内分泌调理", "保持心情愉悦"]
+                }
+            },
+            middle: { // 46-60
+                male: {
+                    career: ["事业巅峰，功成名就", "宜守成，不宜冒进", "经验宝贵，可传后人", "财运稳定，安享成果"],
+                    love: ["夫妻情深，相濡以沫", "子女独立，各有成就", "宜多陪伴家人"],
+                    health: ["注意心血管健康", "适度运动，保持活力"]
+                },
+                female: {
+                    career: ["经验丰富，受人尊敬", "宜退居二线，享受生活", "可培养兴趣爱好"],
+                    love: ["家庭和睦，子孙绕膝", "夫妻恩爱，白头偕老"],
+                    health: ["注意更年期调理", "保持乐观心态"]
+                }
+            },
+            senior: { // 60+
+                male: {
+                    career: ["功成身退，安享晚年", "可传授经验，指导后人", "名利双收，德高望重"],
+                    love: ["子孙满堂，天伦之乐", "夫妻相伴，岁月静好"],
+                    health: ["注意慢性病管理", "保持适度活动"]
+                },
+                female: {
+                    career: ["晚年清闲，享福之时", "可含饴弄孙，享受天伦"],
+                    love: ["家庭和睦，子孙孝顺", "晚年幸福，福寿双全"],
+                    health: ["注意骨骼健康", "保持社交活动"]
+                }
+            }
+        };
+
         // ============ 全局变量 ============
         let faceMesh = null, faceFeatures = null, currentResult = null;
+        let userGender = null, userAge = null;
+
+        // ============ 信息输入 ============
+        function selectGender(gender) {
+            userGender = gender;
+            document.querySelectorAll('.gender-btn').forEach(btn => {
+                btn.classList.toggle('selected', btn.dataset.gender === gender);
+            });
+        }
+
+        function validateAge() {
+            const input = document.getElementById('ageInput');
+            const age = parseInt(input.value);
+            if (age < 1 || age > 120) {
+                alert('请输入1-120之间的有效年龄');
+                input.value = '';
+                userAge = null;
+            } else {
+                userAge = age;
+            }
+        }
+
+        function checkInfoAndUpload() {
+            if (!userGender) {
+                alert('请先选择性别');
+                return;
+            }
+            if (!userAge) {
+                alert('请先输入年龄');
+                document.getElementById('ageInput').focus();
+                return;
+            }
+            document.getElementById('fileInput').click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const img = document.getElementById('previewImg');
+                img.src = e.target.result;
+                img.onload = async function() {
+                    document.getElementById('uploadSection').style.display = 'none';
+                    document.getElementById('infoSection').style.display = 'none';
+                    document.getElementById('previewSection').classList.add('active');
+                    if (!faceMesh) await initFaceMesh();
+                    await faceMesh.send({ image: img });
+                };
+            };
+            reader.readAsDataURL(file);
+        }
 
         // ============ 初始化 ============
         async function initFaceMesh() {
@@ -624,25 +415,6 @@
             };
         }
 
-        // ============ 文件上传 ============
-        document.getElementById('fileInput').addEventListener('change', async function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = async function(event) {
-                const img = document.getElementById('previewImg');
-                img.src = event.target.result;
-                img.onload = async function() {
-                    document.getElementById('uploadSection').style.display = 'none';
-                    document.getElementById('previewSection').classList.add('active');
-                    if (!faceMesh) await initFaceMesh();
-                    await faceMesh.send({ image: img });
-                };
-            };
-            reader.readAsDataURL(file);
-        });
-
         // ============ 分析 ============
         function startAnalyze() {
             document.getElementById('previewSection').classList.remove('active');
@@ -653,6 +425,56 @@
                 document.getElementById('loading').classList.remove('active');
                 document.getElementById('resultSection').classList.add('active');
             }, 2500);
+        }
+
+        function getLifeStage(age) {
+            if (age < 18) return 'youth';
+            if (age <= 30) return 'youth';
+            if (age <= 45) return 'prime';
+            if (age <= 60) return 'middle';
+            return 'senior';
+        }
+
+        function generateLifePath(gender, age, personality) {
+            const stage = getLifeStage(age);
+            const stageData = lifeStages[stage][gender];
+            
+            // 根据性格调整人生走向
+            const paths = [];
+            
+            // 当前阶段
+            paths.push({
+                age: `${age}岁（当前）`,
+                text: stageData.career[Math.floor(Math.random() * stageData.career.length)]
+            });
+            
+            // 下一阶段
+            if (stage === 'youth') {
+                paths.push({
+                    age: `${age + 5}-${age + 10}岁`,
+                    text: lifeStages.prime[gender].career[0]
+                });
+                paths.push({
+                    age: `${age + 15}-${age + 20}岁`,
+                    text: lifeStages.middle[gender].career[1]
+                });
+            } else if (stage === 'prime') {
+                paths.push({
+                    age: `${age + 5}-${age + 10}岁`,
+                    text: lifeStages.middle[gender].career[Math.floor(Math.random() * lifeStages.middle[gender].career.length)]
+                });
+                paths.push({
+                    age: `60岁以后`,
+                    text: lifeStages.senior[gender].career[0]
+                });
+            } else if (stage === 'middle') {
+                paths.push({
+                    age: `60岁以后`,
+                    text: lifeStages.senior[gender].career[Math.floor(Math.random() * lifeStages.senior[gender].career.length)]
+                });
+            }
+            
+            return paths;
         }
 
         function generateResult() {
@@ -675,8 +497,18 @@
             const love = loveFortunes[Math.floor(Math.random() * loveFortunes.length)];
             const health = healthFortunes[Math.floor(Math.random() * healthFortunes.length)];
             
-            currentResult = { classical, personality, career, love, health, features, blessing: blessings[Math.floor(Math.random() * blessings.length)] };
+            // 生成人生走向
+            const lifePath = generateLifePath(userGender, userAge, personality);
             
+            currentResult = { 
+                classical, personality, career, love, health, features, 
+                lifePath, gender: userGender, age: userAge,
+                blessing: blessings[Math.floor(Math.random() * blessings.length)] 
+            };
+            
+            // 显示用户信息
+            const genderText = userGender === 'male' ? '男' : '女';
+            document.getElementById('userInfoDisplay').textContent = `${genderText}性 · ${userAge}岁`;
             document.getElementById('classicalText').textContent = `「${classical}」`;
             
             let resultHTML = `
@@ -719,6 +551,21 @@
                 </div>
             `;
             
+            // 添加人生走向
+            resultHTML += `
+                <div class="life-path">
+                    <div class="life-path-title">🗓️ 人生走向预测</div>
+                    <div class="timeline">
+                        ${lifePath.map(item => `
+                            <div class="timeline-item">
+                                <div class="timeline-age">${item.age}</div>
+                                <div class="timeline-text">${item.text}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
             document.getElementById('resultContent').innerHTML = resultHTML;
             document.getElementById('finalBlessing').textContent = currentResult.blessing;
         }
@@ -737,25 +584,25 @@
             const dpr = window.devicePixelRatio || 2;
             
             canvas.width = 600 * dpr;
-            canvas.height = 900 * dpr;
+            canvas.height = 1000 * dpr;
             canvas.style.width = '100%';
             canvas.style.height = 'auto';
             ctx.scale(dpr, dpr);
             
             // 背景
-            const grad = ctx.createLinearGradient(0, 0, 600, 900);
+            const grad = ctx.createLinearGradient(0, 0, 600, 1000);
             grad.addColorStop(0, '#1a1a2e');
             grad.addColorStop(0.5, '#16213e');
             grad.addColorStop(1, '#0f3460');
             ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, 600, 900);
+            ctx.fillRect(0, 0, 600, 1000);
             
             // 边框
             ctx.strokeStyle = '#d4af37';
             ctx.lineWidth = 6;
-            ctx.strokeRect(15, 15, 570, 870);
+            ctx.strokeRect(15, 15, 570, 970);
             ctx.lineWidth = 1;
-            ctx.strokeRect(25, 25, 550, 850);
+            ctx.strokeRect(25, 25, 550, 950);
             
             // 标题
             ctx.fillStyle = '#d4af37';
@@ -766,56 +613,71 @@
             ctx.fillStyle = '#b8860b';
             ctx.fillText('AI面相分析', 300, 95);
             
+            // 用户信息
+            const genderText = currentResult.gender === 'male' ? '男' : '女';
+            ctx.fillStyle = '#d4af37';
+            ctx.font = '14px -apple-system, PingFang SC';
+            ctx.fillText(`${genderText}性 · ${currentResult.age}岁`, 300, 120);
+            
             // 古典批语
             ctx.fillStyle = '#f4e4c1';
             ctx.font = 'italic 16px -apple-system, PingFang SC';
-            wrapText(ctx, `「${currentResult.classical}」`, 300, 140, 520, 24);
+            wrapText(ctx, `「${currentResult.classical}」`, 300, 155, 520, 24);
             
             // 分隔线
             ctx.strokeStyle = '#d4af37';
             ctx.beginPath();
-            ctx.moveTo(80, 180);
-            ctx.lineTo(520, 180);
+            ctx.moveTo(80, 190);
+            ctx.lineTo(520, 190);
             ctx.stroke();
             
             // 内容
-            let y = 215;
+            let y = 220;
             ctx.textAlign = 'left';
             
             ctx.fillStyle = '#d4af37';
-            ctx.font = 'bold 15px -apple-system, PingFang SC';
+            ctx.font = 'bold 14px -apple-system, PingFang SC';
             ctx.fillText(`☯ ${currentResult.personality.element}行 · ${currentResult.personality.type}`, 50, y);
-            y += 28;
+            y += 25;
             
             ctx.fillStyle = '#e8dcc8';
-            ctx.font = '13px -apple-system, PingFang SC';
-            wrapText(ctx, `${currentResult.personality.desc}。${currentResult.personality.traits.join('、')}。`, 50, y, 500, 20);
-            y += 45;
+            ctx.font = '12px -apple-system, PingFang SC';
+            wrapText(ctx, `${currentResult.personality.desc}。${currentResult.personality.traits.join('、')}。`, 50, y, 500, 18);
+            y += 40;
             
             ctx.fillStyle = '#d4af37';
-            ctx.font = 'bold 15px -apple-system, PingFang SC';
+            ctx.font = 'bold 14px -apple-system, PingFang SC';
             ctx.fillText(`💼 事业 [${currentResult.career.level}]`, 50, y);
-            y += 24;
+            y += 22;
             ctx.fillStyle = '#e8dcc8';
-            ctx.font = '13px -apple-system, PingFang SC';
-            wrapText(ctx, currentResult.career.text, 50, y, 500, 20);
-            y += 42;
+            ctx.font = '12px -apple-system, PingFang SC';
+            wrapText(ctx, currentResult.career.text, 50, y, 500, 18);
+            y += 38;
             
             ctx.fillStyle = '#d4af37';
-            ctx.font = 'bold 15px -apple-system, PingFang SC';
+            ctx.font = 'bold 14px -apple-system, PingFang SC';
             ctx.fillText(`💕 姻缘 [${currentResult.love.status}]`, 50, y);
-            y += 24;
+            y += 22;
             ctx.fillStyle = '#e8dcc8';
-            wrapText(ctx, currentResult.love.text, 50, y, 500, 20);
-            y += 42;
+            wrapText(ctx, currentResult.love.text, 50, y, 500, 18);
+            y += 38;
             
-            ctx.fillStyle = '#d4af37';
-            ctx.font = 'bold 15px -apple-system, PingFang SC';
-            ctx.fillText(`🌿 健康`, 50, y);
-            y += 24;
-            ctx.fillStyle = '#e8dcc8';
-            wrapText(ctx, currentResult.health, 50, y, 500, 20);
-            y += 50;
+            // 人生走向
+            ctx.fillStyle = '#ffd700';
+            ctx.font = 'bold 14px -apple-system, PingFang SC';
+            ctx.fillText('🗓️ 人生走向', 50, y);
+            y += 25;
+            
+            currentResult.lifePath.forEach(item => {
+                ctx.fillStyle = '#b8860b';
+                ctx.font = '11px -apple-system, PingFang SC';
+                ctx.fillText(`• ${item.age}`, 50, y);
+                y += 16;
+                ctx.fillStyle = '#e8dcc8';
+                ctx.font = '11px -apple-system, PingFang SC';
+                wrapText(ctx, item.text, 60, y, 480, 16);
+                y += 32;
+            });
             
             // 分隔线
             ctx.strokeStyle = '#d4af37';
@@ -823,18 +685,18 @@
             ctx.moveTo(80, y);
             ctx.lineTo(520, y);
             ctx.stroke();
-            y += 30;
+            y += 25;
             
             // 祝福
             ctx.fillStyle = '#ffd700';
-            ctx.font = 'italic 15px -apple-system, PingFang SC';
+            ctx.font = 'italic 14px -apple-system, PingFang SC';
             ctx.textAlign = 'center';
-            wrapText(ctx, currentResult.blessing, 300, y, 520, 22);
+            wrapText(ctx, currentResult.blessing, 300, y, 520, 20);
             
             // 底部
             ctx.fillStyle = '#b8860b';
-            ctx.font = '11px -apple-system, PingFang SC';
-            ctx.fillText('仅供娱乐 · 无科学依据 · 扫码测面相', 300, 870);
+            ctx.font = '10px -apple-system, PingFang SC';
+            ctx.fillText('仅供娱乐 · 无科学依据 · 扫码测面相', 300, 970);
             
             document.getElementById('posterModal').classList.add('active');
         }
@@ -887,7 +749,10 @@
         async function shareResult() {
             if (!currentResult) return;
             
-            const text = `【神相天机】\n${currentResult.classical}\n\n五行：${currentResult.personality.element}行 · ${currentResult.personality.type}\n性格：${currentResult.personality.traits.join('、')}\n\n事业：${currentResult.career.text}\n姻缘：${currentResult.love.text}\n\n${currentResult.blessing}\n\n（仅供娱乐，无科学依据）`;
+            const genderText = currentResult.gender === 'male' ? '男' : '女';
+            const lifePathText = currentResult.lifePath.map(p => `${p.age}: ${p.text}`).join('\n');
+            
+            const text = `【神相天机】\n${genderText}性 · ${currentResult.age}岁\n\n${currentResult.classical}\n\n五行：${currentResult.personality.element}行 · ${currentResult.personality.type}\n性格：${currentResult.personality.traits.join('、')}\n\n事业：${currentResult.career.text}\n姻缘：${currentResult.love.text}\n\n人生走向：\n${lifePathText}\n\n${currentResult.blessing}\n\n（仅供娱乐，无科学依据）`;
             
             try {
                 if (navigator.share) {
@@ -906,9 +771,14 @@
         function restart() {
             document.getElementById('resultSection').classList.remove('active');
             document.getElementById('uploadSection').style.display = 'block';
+            document.getElementById('infoSection').style.display = 'block';
             document.getElementById('fileInput').value = '';
             document.getElementById('landmarksInfo').style.display = 'none';
             document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('ageInput').value = '';
+            document.querySelectorAll('.gender-btn').forEach(btn => btn.classList.remove('selected'));
+            userGender = null;
+            userAge = null;
             faceFeatures = null;
             currentResult = null;
         }
